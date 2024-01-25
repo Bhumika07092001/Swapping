@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Realtime Database Example</title>
+    <!-- BootStrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        
+    }
+
+    #container {
+        max-width: 800px;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+    }
+
+    .form-group {
+        margin-bottom: 0; /* Remove the default margin-bottom for better alignment */
+    }
+
+    .input-group {
+        width: 100%; /* Make sure the input group takes up the full width */
+    }
+
+    #topicInput {
+        width: calc(70% - 20px); /* Adjusted width to leave space for the button */
+        padding: 10px;
+        margin-right: 10px;
+        height: 40px; /* Set the height to your desired value */
+    }
+
+    #submitBtn {
+        padding: 10px;
+        height: 40px; /* Set the height to match the input field */
+    }
+
+    #topicsList {
+        margin-top: 20px;
+    }
+
+    /* Change the background color of the navbar */
+    .navbar-custom {
+        background-color: #3498db; /* Change the color code to your preferred color */
+    }
+
+    .logo-spacing {
+        padding-left: 20px; /* Adjust the value as needed */
+    }
+
+    .navbar-toggler .navbar-toggler-icon {
+        color: #ffffff; /* Set the desired color for the hamburger icon */
+    }
+
+</style>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <a class="navbar-brand" href="index.html">
+            <img src="./ic_launcher.png" alt="Logo" height="40" class="logo-spacing">
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon">
+                <i class="fas fa-bars" style="color: #ffffff;"></i>
+            </span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav"> <!-- Remove ml-auto from here -->
+                <li class="nav-item logo-spacing">
+                    <a class="nav-link" id="userDetailsButton" href="user_details_v2.html" style="color: #ffffff;">
+                        <i class="fas fa-user" style="color: #ffffff;"></i> User Details
+                    </a>
+                </li>
+                
+                <li class="nav-item logo-spacing">
+                    <a class="nav-link" id="userDetailsButton" href="database.html" style="color: #ffffff;">
+                        <i class="fas fa-database" style="color: #ffffff;"></i> <!-- Font Awesome user icon with green color -->
+                        Database
+                    </a>
+                </li>
+    
+                <li class="nav-item logo-spacing">
+                    <a class="nav-link" id="userDetailsButton" href="verified_users.html" style="color: #ffffff;">
+                        <i class="fa fa-certificate"></i>
+                        <!-- <i class="fas fa-database" style="color: #ffffff;"></i>  -->
+                        <!-- Font Awesome user icon with green color -->
+                        Verfied User's
+                    </a>
+                </li>
+    
+                <!-- <li class="nav-item logo-spacing">
+                    <a class="nav-link" id="userDetailsButton" href="topics_list.html" style="color: #ffffff;">
+                        <i class="fa fa-rss-square"></i>
+                        PTopics List
+                    </a>
+                </li> -->
+            </ul>
+        </div>
+    </nav>
+
+    <div id="container" class="mt-5">
+        <div class="form-group">
+            <div class="input-group">
+                <input type="text" class="form-control" id="topicInput" placeholder="Enter a new topic">
+                <div class="input-group-append">
+                    <button class="btn btn-primary" id="submitBtn" onclick="submitTopic()">Submit</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="topicsList">
+            <h2 class="text-center">Pending Topics:</h2>
+            <!-- Add this div for displaying total count -->
+            <div id="btn-div">
+                <button id="swap" onclick="swapTopic();">swap</button>
+                <button id="up-btn" onclick="moveUp();" style="color: #3498db; display: none;">move up</button>
+                <button id="down-btn" onclick="moveDown();" style="color: #3498db; display: none;">move down</button>
+            </div>
+            <div id="totalCount" class="mt-3 text-center"></div>
+            <ol class="list-group" id="topicsUl"></ol>
+        </div>
+        <div id="Confirmation-div">
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal" id="loadingModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Bootstrap and Firebase scripts -->
+    <!-- JQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.2.6/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.6/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.6/firebase-database.js"></script>
+
+    <script>
+        // Initialize Firebase with your project config
+        // Your Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyBEwxFrkcPUg9zxonN2umIA1Z_E3X1tGP8",
+            authDomain: "webapp-1912c.firebaseapp.com",
+            databaseURL: "https://webapp-1912c-default-rtdb.firebaseio.com",
+            projectId: "webapp-1912c",
+            storageBucket: "webapp-1912c.appspot.com",
+            messagingSenderId: "637487044305",
+            appId: "1:637487044305:web:8408e6e2fb3276cb7ad7f0",
+            measurementId: "G-K8MFHV3XSL"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+                // Show loading modal
+                function showLoadingModal() {
+            $('#loadingModal').modal('show');
+        }
+        showLoadingModal();
+
+        // Hide loading modal
+        function hideLoadingModal() {
+            $('#loadingModal').modal('hide');
+        }
+
+        // Reference to the 'pendingTopics' node in the database
+        const pendingTopicsRef = firebase.database().ref('pendingTopics');
+        var topicArray=[];
+
+        // Function to submit a new topic
+        function submitTopic() {
+            const topicInput = document.getElementById('topicInput');
+            const topicName = topicInput.value.trim();
+
+            if (topicName !== '') {
+                // Generate a random pushId
+                const newPushId = pendingTopicsRef.push().key;
+
+                // Create a new data object
+                const newData = {};
+                newData[newPushId] = { topicName };
+
+                // Push data to the database
+                pendingTopicsRef.update(newData);
+
+                // Clear the input field
+                topicInput.value = '';
+            }
+        }
+
+        // Function to update the topics list
+        // function updateTopicsList(snapshot) {
+        //     const topicsList = document.getElementById('topicsUl');
+        //     topicsList.innerHTML = '';
+
+        //     snapshot.forEach(childSnapshot => {
+        //         const topicName = childSnapshot.val().topicName;
+        //         const li = document.createElement('li');
+        //         li.textContent = topicName;
+        //         topicsList.appendChild(li);
+        //     });
+        // }
+
+        // Function to update the topics list and total count
+        let Count;
+        function updateTopicsList(snapshot) {
+            const topicsList = document.getElementById('topicsUl');
+            const totalCountElement = document.getElementById('totalCount');
+            let totalCount = 0;
+
+            topicsList.innerHTML = '';
+
+            snapshot.forEach(childSnapshot => {
+                const topicName = childSnapshot.val().topicName;
+                const li = document.createElement('li');
+                li.textContent = topicName;
+                topicsList.appendChild(li);
+                topicArray.push(topicName);
+                totalCount++;
+        
+            });
+
+            
+
+            // Update the total count in the HTML
+            totalCountElement.textContent = `Total Pending Topics: ${totalCount}`;
+            Count=totalCount;
+        }
+
+        // Listen for changes in the 'pendingTopics' node
+        pendingTopicsRef.on('value', (snapshot) => {
+            updateTopicsList(snapshot);
+            hideLoadingModal(); // Hide loading modal when data is fetched
+        });
+
+        
+// function to display an input field to swap
+        let inputField;
+        const swapTopic=()=>{
+            const div=document.getElementById('btn-div');
+            const moveUp= document.getElementById('up-btn');
+            const moveDown= document.getElementById('down-btn');
+            const swapButton=document.getElementById('swap');
+            inputField=document.createElement('input');
+            inputField.type='number';
+            div.appendChild(inputField);
+            swapButton.style.display='none';
+            moveUp.style.display='inline';
+            moveDown.style.display='inline';
+
+            }
+        const swap=(a,b)=>{
+            var temp;
+            temp=topicArray[a];
+            topicArray[a]=topicArray[b];
+            topicArray[b]=temp;
+        }
+// function to swap topic with upper half
+            const moveUp=()=>{
+            var yes;
+            var a=inputField.value-1;
+            var range=Math.floor(Count/2);
+            const randomNumber = generateRandomNumber(0, range);
+            if(randomNumber!=a){
+            swap(a,randomNumber);
+
+            pendingTopicsRef.on('value', (snapshot) => {
+                swappedTopicsList(snapshot);
+            });
+
+            yes=true;
+            confirmation(yes);
+            }
+            else{
+                console.log('swap again!,no change after swapping');
+                yes=false;
+                confirmation(yes);
+            }
+        }
+//fucntion to swap topic with lower half
+        const moveDown=()=>{
+            var a=inputField.value-1;
+            var range=Math.floor(Count/2);
+            const randomNumber = generateRandomNumber(range, Count-1);
+            if(randomNumber!= a){
+            swap(a,randomNumber);
+
+            pendingTopicsRef.on('value', (snapshot) => {
+            swappedTopicsList(snapshot);
+            });
+            
+            yes=true;
+            confirmation(yes);
+            }
+            else{
+                console.log('swap again!,no change after swapping');
+                yes=false;
+                confirmation(yes);
+            }
+
+        }
+//function to choose random topic to swap with
+        function generateRandomNumber(min, max) {
+            if (!Number.isInteger(min) || !Number.isInteger(max)) {
+                throw new Error("Both min and max must be integers");
+             }
+        
+            if (min >= max) {
+                throw new Error("Min must be less than max");
+            }
+        
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+//function to update the topics after swapping
+        function swappedTopicsList(snapshot) {
+            const topicsList = document.getElementById('topicsUl');
+            const totalCountElement = document.getElementById('totalCount');
+            topicsList.innerHTML = '';
+            var i=0;
+            snapshot.forEach(childSnapshot => {
+                const topicName = childSnapshot.val().topicName;
+                const li = document.createElement('li');
+                li.textContent = topicArray[i];
+                topicsList.appendChild(li);
+                i++;
+            });
+        }
+//function to display confirmation of successful swap
+        function confirmation(yes){
+            const h3Div=document.getElementById('Confirmation-div');
+            const msg=document.createElement('h2');
+            msg.innerText = yes ? 'Swapping successful!!' : 'Swap again! Order did not change';
+            msg.style.color = yes ? 'green' : 'red';
+            h3Div.appendChild(msg);
+            let isExecuted=false;
+            setTimeout(()=>{
+                if(!isExecuted){
+                      h3Div.removeChild(msg);
+                }},1500)
+        }
+             
+       
+    </script>
+</body>
+</html>
